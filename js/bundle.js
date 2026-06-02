@@ -111,7 +111,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  /* open modal */
   modalButtons.forEach(function(modalBtn) {
     modalBtn.addEventListener('click', async function(e) {
       e.preventDefault();
@@ -119,7 +118,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  /* close modal */
   closeButtons.forEach(function(closeBtn) {
     closeBtn.addEventListener('click', async function(e) {
       await closeModal(closeBtn);
@@ -134,7 +132,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   });
-
 });
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -191,14 +188,17 @@ function animateNumber(element, start, end, duration = 1500) {
     let progress = Math.min(elapsed / duration, 1);
 
     const easeProgress = 1 - Math.pow(1 - progress, 3);
-    const currentValue = Math.floor(start + (end - start) * easeProgress);
+    let currentValue = Math.floor(start + (end - start) * easeProgress);
+
+    currentValue = currentValue.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
     element.textContent = currentValue;
 
     if (progress < 1) {
       requestAnimationFrame(update);
     } else {
-      element.textContent = end;
+      let endValue = end.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      element.textContent = endValue;
     }
   }
 
@@ -227,21 +227,32 @@ function animateProgressBar(bar, targetPercent, duration = 1500) {
   requestAnimationFrame(update);
 }
 
+let animated = false;
+
 function animateAllCards() {
   const cards = document.querySelectorAll('.stat-card');
-  const targets = [1000, 1500, 3000, 4000];
-  const maxTarget = 4000;
 
-  cards.forEach((card, index) => {
-    const targetValue = targets[index];
-    if (!targetValue) return;
+  let maxTarget = 0;
+  cards.forEach(card => {
+    const targetValue = parseInt(card.getAttribute('data-target'), 10);
+    if (!isNaN(targetValue) && targetValue > maxTarget) {
+      maxTarget = targetValue;
+    }
+  });
+
+  cards.forEach(card => {
+    const targetValue = parseInt(card.getAttribute('data-target'), 10);
+    if (isNaN(targetValue)) return;
 
     const valueElement = card.querySelector('.card-value');
     if (valueElement) {
-      const sup = valueElement.querySelector('sup');
+      const existingSpan = valueElement.querySelector('.animated-number');
+      if (existingSpan) return;
+
       const numberSpan = document.createElement('span');
       numberSpan.className = 'animated-number';
       numberSpan.textContent = '200';
+      numberSpan.style.whiteSpace = 'nowrap';
 
       const oldText = valueElement.childNodes[1];
       if (oldText && oldText.nodeType === 3) {
@@ -253,7 +264,7 @@ function animateAllCards() {
     }
 
     const progressFill = card.querySelector('.progressbar-fill');
-    if (progressFill) {
+    if (progressFill && maxTarget > 200) {
       const targetPercent = (targetValue - 200) / (maxTarget - 200) * 100;
       const clampedPercent = Math.min(100, Math.max(0, targetPercent));
       animateProgressBar(progressFill, clampedPercent, 1500);
@@ -261,53 +272,34 @@ function animateAllCards() {
   });
 }
 
+function checkAndAnimate() {
+  if (animated) return;
+
+  const cardsContainer = document.querySelector('.stat-block-cards');
+  if (!cardsContainer) return;
+
+  const rect = cardsContainer.getBoundingClientRect();
+  const isVisible = rect.top < window.innerHeight - 200 && rect.bottom > 0;
+
+  if (isVisible) {
+    animated = true;
+    animateAllCards();
+    window.removeEventListener('scroll', checkAndAnimate);
+    window.removeEventListener('resize', checkAndAnimate);
+  }
+}
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', animateAllCards);
-} else {
-  animateAllCards();
-}
-
-function checkAllBlocks() {
-  const blocks = document.querySelectorAll('.animate-block');
-
-  blocks.forEach(block => {
-    if (block.hasAttribute('data-animated')) {
-      return;
-    }
-
-    const rect = block.getBoundingClientRect();
-    const windowHeight = window.innerHeight;
-
-    const isInFooter = block.closest('footer');
-    const offset = (isInFooter || window.innerWidth < 768) ? 0 : 0;
-
-    if (rect.top <= windowHeight - offset && rect.bottom >= 0) {
-      const delay = block.getAttribute('data-delay') || 0;
-      const animationType = block.getAttribute('data-animation') || 'fade-up';
-
-      setTimeout(() => {
-        block.classList.add('animated');
-        block.classList.add(animationType);
-        block.setAttribute('data-animated', 'true');
-      }, parseInt(delay));
-    }
+  document.addEventListener('DOMContentLoaded', function() {
+    checkAndAnimate();
+    window.addEventListener('scroll', checkAndAnimate);
+    window.addEventListener('resize', checkAndAnimate);
   });
+} else {
+  checkAndAnimate();
+  window.addEventListener('scroll', checkAndAnimate);
+  window.addEventListener('resize', checkAndAnimate);
 }
-
-function checkVisibility() {
-  checkAllBlocks();
-}
-
-window.addEventListener('load', function() {
-  checkVisibility();
-  setTimeout(checkAllBlocks, 500);
-});
-
-window.addEventListener('scroll', checkVisibility);
-
-window.addEventListener('resize', function() {
-  setTimeout(checkAllBlocks, 100);
-});
 
 const observer = new IntersectionObserver((entries) => {
   entries.forEach(entry => {
