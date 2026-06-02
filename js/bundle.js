@@ -16,11 +16,40 @@ if (header) {
 document.addEventListener('DOMContentLoaded', function() {
   const anchorLinks = document.querySelectorAll('a[href^="#"]');
 
+  function getHeaderHeight() {
+    const header = document.querySelector('header');
+    if (!header) return 0;
+
+    const headerHeight = header.offsetHeight;
+    const isMobile = window.innerWidth <= 1024;
+    const mobileMenuOpen = document.querySelector('.header-nav.show');
+
+    if (isMobile && mobileMenuOpen) {
+      return 0;
+    }
+
+    return headerHeight;
+  }
+
+  function getScrollOffset(targetElement) {
+    const headerHeight = getHeaderHeight();
+    const targetRect = targetElement.getBoundingClientRect();
+    const targetTop = targetRect.top + window.pageYOffset;
+
+    let offset = headerHeight + 20;
+
+    if (window.innerWidth <= 768) {
+      offset = headerHeight + 15;
+    }
+
+    return targetTop - offset;
+  }
+
   anchorLinks.forEach(link => {
     link.addEventListener('click', function(e) {
       const targetId = this.getAttribute('href');
 
-      if (targetId === '#' || targetId === '') return;
+      if (targetId === '#' || targetId === '' || targetId === 'javascript:void(0)') return;
 
       const targetElement = document.querySelector(targetId);
       if (!targetElement) return;
@@ -34,15 +63,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const url = linkPath + targetId;
         window.location.href = url;
       } else {
-        const headerHeight = document.querySelector('header') ? document.querySelector('header').offsetHeight : 0;
-        const windowHeight = window.innerHeight;
-        const elementHeight = targetElement.offsetHeight;
-
-        const elementPosition = targetElement.getBoundingClientRect().top;
-        const offsetPosition = elementPosition + window.pageYOffset - (windowHeight / 2) + (elementHeight / 2);
+        const scrollPosition = getScrollOffset(targetElement);
 
         window.scrollTo({
-          top: offsetPosition,
+          top: scrollPosition,
           behavior: 'smooth'
         });
 
