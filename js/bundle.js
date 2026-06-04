@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let offset = headerHeight + 20;
 
     if (window.innerWidth <= 768) {
-      offset = headerHeight + 15;
+      offset = headerHeight + 80;
     }
 
     return targetTop - offset;
